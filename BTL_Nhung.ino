@@ -57,33 +57,35 @@ float playerX, playerY;
 bool isBuzzerOn = false;
 // bool increaseSpeed = false;
 
-// Flappy Bird
+// Flappy Bird________________________________________
 // At each time, there are only a maximum of 4 tubes on the screen
 float tubeX[4];
 int bottomTubeHeight[4];
 bool isFlyingUp = false;
+// ___________________________________________________
 
-// Racing car
+// Racing car_________________________________________
 float obstacleCarsX[RACING_CAR_ROW_COUNT], obstacleCarsY[RACING_CAR_ROW_COUNT], bulletX = 128.0, bulletY = -10.00;
 int carRow = 1;
 bool isExistBullet = false;
+// ___________________________________________________
 
-// Catch the fruits_________________________________
+// Catch the fruits___________________________________
 float fruitColumnX[FRUIT_COLUMN_COUNT], fruitColumnY[FRUIT_COLUMN_COUNT];
 int basketColumn = 1;
 bool isRockColumn[FRUIT_COLUMN_COUNT] = { false };
 int fruitType[FRUIT_COLUMN_COUNT] = { -1 };
 // ___________________________________________________
 
-// Dinosaur run______________________________________
-float cactusX[3];
+// Dinosaur run_______________________________________
+float cactusX[3], groundX[2];
 int topCactusY[3], cactusDisplay[3];
-int cactusWidth[4] = { 10, 13, 20, 10 };
-int cactusHeight[4] = { 20, 13, 20, 20 };
+int cactusWidth[4] = { Cactus1Tall_width, Cactus2Short_width, Cactus3Tall_width, Cactus1Tall_width };
+int cactusHeight[4] = { Cactus1Tall_height, Cactus2Short_height, Cactus3Tall_height, Cactus1Tall_height };
 const unsigned char *CactusArray[] = { Cactus1Tall, Cactus2Short, Cactus3Tall, Cactus1Tall };
-bool isJumping = false;
-bool isFalling = false;
+bool isJumping = false, isFalling = false;
 float speedUp, speedDown;
+float speedUpArray[] = { 0.012, 0.021, 0.039, 0.07 }, speedDownArray[] = { 0.013, 0.02, 0.026, 0.03 };
 unsigned long dinoTopTime = 0;
 unsigned int dinoTopDelay = 0;
 // ___________________________________________________
@@ -132,6 +134,7 @@ void loop() {
   display.display();
 }
 
+// Hiển thị màn hình menu
 void DisplayMenuPage() {
   for (int i = 0; i < MENU_ITEM_COUNT; i++) {
     if (i == choosenItemIndex) {
@@ -161,6 +164,7 @@ void DisplayMenuPage() {
   display.display();
 }
 
+// Hiển thị màn hình kết thúc
 void DisplayEndGamePage() {
   display.setFont(ArialMT_Plain_16);
   display.drawString(0, 0, "Your score: " + String(score));
@@ -186,18 +190,19 @@ void DisplayEndGamePage() {
   }
 
   // If BOOT button is pressed, reset high score in game and in the flash memory
-  // if (digitalRead(BOOT_BUTTON_PIN) == LOW)
-  // {
-  //   score = 0;
-  //   highScore = 0;
+  if (digitalRead(BOOT_BUTTON_PIN) == LOW)
+  {
+    score = 0;
+    highScore = 0;
 
-  //   // Write high score to flash memory
-  //   preferences.begin(gameName, false);
-  //   preferences.putUInt("highScore", highScore);
-  //   preferences.end();
-  // }
+    // Write high score to flash memory
+    preferences.begin(gameName, false);
+    preferences.putUInt("highScore", highScore);
+    preferences.end();
+  }
 }
 
+// Game Flappy bird
 void FlappyBird() {
   // Display start screen
   if (gameState == 0) {
@@ -213,7 +218,6 @@ void FlappyBird() {
     display.drawXbm(64, 0, Building_width, Building_height, Building);
     display.drawXbm(playerX, playerY, Flappy_width, Flappy_height, Flappy);
     display.setColor(WHITE);
-    // display.fillRect(0, SCREEN_HEIGHT - 5, SCREEN_WIDTH, 5);
 
     display.setFont(ArialMT_Plain_10);
     display.drawString(0, 46, "Start");
@@ -306,7 +310,7 @@ void FlappyBird() {
 
 
     // Check if out of bound on vertical axis
-    if (playerY > 63 || playerY < 0) {
+    if ((playerY + Flappy_height) >= 64 || playerY < 0) {
       EndingSound();
 
       if (score > highScore) {
@@ -323,8 +327,8 @@ void FlappyBird() {
 
     // Check for collision with tube
     for (int i = 0; i < 4; i++) {
-      if (tubeX[i] <= playerX + 7 && playerX + 7 <= tubeX[i] + 6) {
-        if (playerY < bottomTubeHeight[i] || playerY + 8 > bottomTubeHeight[i] + PATH_WIDTH) {
+      if (tubeX[i] <= (playerX + 7) && (playerX + 7) <= tubeX[i] + 6) {
+        if (playerY <= bottomTubeHeight[i] || (playerY + Flappy_height) >= (bottomTubeHeight[i] + PATH_WIDTH)) {
 
           EndingSound();
 
@@ -354,6 +358,7 @@ void FlappyBird() {
   }
 }
 
+// Game Racing car
 void RacingCar() {
   // Display start screen
   if (gameState == 0) {
@@ -369,7 +374,7 @@ void RacingCar() {
     display.drawXbm(80, 25, Car_width, Car_height, CarReverse);
     display.drawXbm(playerX, playerY, Car_width, Car_height, Car);
     display.setColor(WHITE);
-    // display.fillRect(0, SCREEN_HEIGHT - 5, SCREEN_WIDTH, 5);
+
 
     display.setFont(ArialMT_Plain_10);
     display.drawString(10, 50, "Start");
@@ -406,6 +411,7 @@ void RacingCar() {
     display.fillRect(0, 20, 128, 2);
     display.fillRect(0, 41, 128, 2);
     unsigned long millis_value = millis();
+
     if (digitalRead(LEFT_BUTTON_PIN) == LOW && digitalRead(RIGHT_BUTTON_PIN) == LOW && millis_value - lastCreateBulletTime > DEBOUNCE_DELAY) {
       if (score >= 3) {
         lastCreateBulletTime = millis_value;
@@ -523,6 +529,7 @@ void RacingCar() {
   }
 }
 
+// Game hứng hoa quả
 void CatchTheFruits() {
   if (gameState == 0) {
     // Reinitialize in-game status
@@ -539,7 +546,7 @@ void CatchTheFruits() {
     display.drawXbm(94, 25, Fruit_width, Fruit_height, Apple);
     display.drawXbm(playerX, playerY + 8, Basket_width, Basket_height, Basket);
     display.setColor(WHITE);
-    // display.fillRect(0, SCREEN_HEIGHT - 5, SCREEN_WIDTH, 5);
+
 
     display.setFont(ArialMT_Plain_10);
     display.drawString(10, 50, "Start");
@@ -577,7 +584,8 @@ void CatchTheFruits() {
     display.drawString(3, 0, String(score));
     // Setup variables and flags if button is pressed
     if (digitalRead(LEFT_BUTTON_PIN) == LOW && millis_value - lastLeftButtonPressTime > DEBOUNCE_DELAY) {
-      keyPressTime = millis_value;
+      keyPressTime = millis();
+      millis_value = keyPressTime;
       lastLeftButtonPressTime = millis_value;
       isBuzzerOn = true;
       if (basketColumn > 0) {
@@ -587,7 +595,8 @@ void CatchTheFruits() {
     }
 
     if (digitalRead(RIGHT_BUTTON_PIN) == LOW && millis_value - lastRightButtonPressTime > DEBOUNCE_DELAY) {
-      keyPressTime = millis_value;
+      keyPressTime = millis();
+      millis_value = keyPressTime;
       lastRightButtonPressTime = millis_value;
       isBuzzerOn = true;
       if (basketColumn < FRUIT_COLUMN_COUNT - 1) {
@@ -637,7 +646,7 @@ void CatchTheFruits() {
           speed += 0.005;
         }
       }
-      // Xe chướng ngại vật ra khỏi màn chơi sẽ dịch chuyển về phải
+
       if (fruitColumnY[i] - Fruit_height > 64) {
         fruitColumnY[i] = -16 - (i * RACING_CAR_DISTANCE);
         hasScored[i] = false;
@@ -651,33 +660,17 @@ void CatchTheFruits() {
     }
 
     // The buzzer will make sound for 10 milliseconds
-    if ((keyPressTime + 10) < millis()) {
+    if ((keyPressTime + 50) < millis()) {
       isBuzzerOn = false;
     }
 
-    // Sound when click
-    if (isBuzzerOn) {
-      digitalWrite(BUZZER_PIN, 1);
-    } else {
-      digitalWrite(BUZZER_PIN, 0);
-    }
+    ClickSound();
 
     // Check collision player with other car
     for (int i = 0; i < FRUIT_COLUMN_COUNT; i++) {
       // Kiểm tra va chạm với đá
       if (isRockColumn[i] && ((playerX <= fruitColumnX[i] && fruitColumnX[i] <= playerX + Basket_width) && ((fruitColumnY[i] <= playerY && playerY <= fruitColumnY[i] + Rock_height) || (playerY <= fruitColumnY[i] && fruitColumnY[i] <= playerY + Basket_height)))) {
-        // Ending sound
-        digitalWrite(BUZZER_PIN, 1);
-        delay(200);
-        digitalWrite(BUZZER_PIN, 0);
-        delay(50);
-        digitalWrite(BUZZER_PIN, 1);
-        delay(50);
-        digitalWrite(BUZZER_PIN, 0);
-        delay(50);
-        digitalWrite(BUZZER_PIN, 1);
-        delay(50);
-        digitalWrite(BUZZER_PIN, 0);
+        EndingSound();
 
         if (score > highScore) {
           highScore = score;
@@ -703,7 +696,9 @@ void CatchTheFruits() {
   }
 }
 
+// Game Khủng long chạy bộ
 void DinosaurRun() {
+  // Màn hình bắt đầu
   if (gameState == 0) {
     score = 0;
     speed = 0.02;
@@ -716,6 +711,7 @@ void DinosaurRun() {
 
     display.drawXbm(playerX, playerY, TRex_width, TRex_height, TRex);
     display.drawXbm(85, playerY, Cactus3Tall_width, Cactus3Tall_height, Cactus3Tall);
+    display.drawXbm(0, 44, Ground_width, Ground_height, Ground_2);
 
     display.setFont(ArialMT_Plain_10);
     display.drawString(10, 50, "Start");
@@ -730,6 +726,9 @@ void DinosaurRun() {
       cactusX[i] = cactusX[i - 1] + cactusWidth[cactusDisplay[i - 1]] + CACTUS_DISTANCE * random(1, 3);
       hasScored[i] = false;
     }
+
+    groundX[0] = 0;
+    groundX[1] = 200;
 
     if (digitalRead(LEFT_BUTTON_PIN) == LOW && millis_value - lastLeftButtonPressTime > DEBOUNCE_DELAY) {
       lastLeftButtonPressTime = millis_value;
@@ -749,13 +748,25 @@ void DinosaurRun() {
     }
   }
 
+  // Màn hình chơi game
   else if (gameState == 1) {
     display.setFont(ArialMT_Plain_10);
     display.drawString(3, 0, String(score));
-    display.fillRect(0, 58, 128, 1);
     display.drawRect(0, 0, 128, 64);
 
     display.drawXbm(playerX, playerY, TRex_width, TRex_height, TRex);
+    for (int i = 0; i < 2; i++) {
+      if (i == 0) {
+        display.drawXbm(groundX[i], 56, Ground_width, Ground_height, Ground_1);
+      } else {
+        display.drawXbm(groundX[i], 56, Ground_width, Ground_height, Ground_2);
+      }
+
+      groundX[i] -= speed;
+      if (groundX[i] + 200 < 0) {
+        groundX[i] = groundX[(i + 1) % 2] + 200;
+      }
+    }
 
     for (int i = 0; i < 3; i++) {
       display.drawXbm(cactusX[i], 58 - cactusHeight[cactusDisplay[i]], cactusWidth[cactusDisplay[i]], cactusHeight[cactusDisplay[i]], CactusArray[cactusDisplay[i]]);
@@ -763,14 +774,15 @@ void DinosaurRun() {
 
     if (digitalRead(LEFT_BUTTON_PIN) == LOW && !isJumping && !isFalling && millis_value - lastLeftButtonPressTime > DEBOUNCE_DELAY) {
       keyPressTime = millis();
-      isBuzzerOn = true;
+      millis_value = keyPressTime;
       lastLeftButtonPressTime = millis_value;
+      isBuzzerOn = true;
       isJumping = true;
     }
 
     ClickSound();
 
-    if ((keyPressTime + 10) < millis()) {
+    if ((keyPressTime + 50) < millis()) {
       isBuzzerOn = false;
     }
 
@@ -795,17 +807,17 @@ void DinosaurRun() {
     }
 
     if (26 <= playerY && playerY < 38) {
-      speedUp = 0.07;
-      speedDown = 0.03;
+      speedUp = speedUpArray[3];
+      speedDown = speedDownArray[3];
     } else if (16 <= playerY && playerY < 26) {
-      speedUp = 0.039;
-      speedDown = 0.026;
+      speedUp = speedUpArray[2];
+      speedDown = speedDownArray[2];
     } else if (9 <= playerY && playerY < 16) {
-      speedUp = 0.021;
-      speedDown = 0.02;
+      speedUp = speedUpArray[1];
+      speedDown = speedDownArray[1];
     } else {
-      speedUp = 0.012;
-      speedDown = 0.013;
+      speedUp = speedUpArray[0];
+      speedDown = speedDownArray[0];
     }
 
     for (int i = 0; i < 3; i++) {
@@ -822,26 +834,36 @@ void DinosaurRun() {
 
         if (score > highScore) {
           highScore = score;
-
           preferences.begin(gameName, false);
           preferences.putUInt("highScore", highScore);
           preferences.end();
         }
+
+        if (score % 10 == 0) {
+          speed += 0.008;
+          dinoTopDelay -= 10;
+          for (int i = 0; i < 4; i++) {
+            speedUpArray[i] += 0.008;
+            speedDownArray[i] += 0.008;
+          }
+        }
       }
 
-      if ((cactusX[i] <= playerX && playerX <= (cactusX[i] + cactusWidth[cactusDisplay[i]] - 4) && (58 - cactusHeight[cactusDisplay[i]] + 4) < (playerY + TRex_height - 7)) 
-         || (playerX <= cactusX[i] && cactusX[i] <= (playerX + TRex_width - 1) && ((58 - cactusHeight[cactusDisplay[i]] + 4) < (playerY + TRex_height - 14) || (TRex_height > cactusHeight[cactusDisplay[i]] && playerY == 38)))) {
+      if ((cactusX[i] <= playerX && playerX <= (cactusX[i] + cactusWidth[cactusDisplay[i]] - 4) && (58 - cactusHeight[cactusDisplay[i]] + 4) < (playerY + TRex_height - 7))
+          || (playerX <= cactusX[i] && cactusX[i] <= (playerX + TRex_width - 1) && ((58 - cactusHeight[cactusDisplay[i]] + 4) < (playerY + TRex_height - 14) || (TRex_height > cactusHeight[cactusDisplay[i]] && playerY == 38)))) {
         EndingSound();
         gameState = 2;
       }
     }
   }
 
+  // Màn hình kết thúc
   else if (gameState == 2) {
     page = END_GAME_PAGE;
   }
 }
 
+// Âm thanh ấn nút
 void ClickSound() {
   if (isBuzzerOn) {
     digitalWrite(BUZZER_PIN, 1);
@@ -850,6 +872,7 @@ void ClickSound() {
   }
 }
 
+// Âm thanh kết thúc
 void EndingSound() {
   digitalWrite(BUZZER_PIN, 1);
   delay(200);
