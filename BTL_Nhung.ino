@@ -68,6 +68,8 @@ bool isFlyingUp = false;
 float obstacleCarsX[RACING_CAR_ROW_COUNT], obstacleCarsY[RACING_CAR_ROW_COUNT], bulletX = 128.0, bulletY = -10.00;
 int carRow = 1;
 bool isExistBullet = false;
+int obstacleCarType[RACING_CAR_ROW_COUNT] = {1};
+int obstacleCarWidth[2] = {Car_width, Truck_width};
 // ___________________________________________________
 
 // Catch the fruits___________________________________
@@ -190,8 +192,7 @@ void DisplayEndGamePage() {
   }
 
   // If BOOT button is pressed, reset high score in game and in the flash memory
-  if (digitalRead(BOOT_BUTTON_PIN) == LOW)
-  {
+  if (digitalRead(BOOT_BUTTON_PIN) == LOW) {
     score = 0;
     highScore = 0;
 
@@ -374,7 +375,7 @@ void RacingCar() {
     display.drawXbm(80, 25, Car_width, Car_height, CarReverse);
     display.drawXbm(playerX, playerY, Car_width, Car_height, Car);
     display.setColor(WHITE);
-
+    // display.fillRect(0, SCREEN_HEIGHT - 5, SCREEN_WIDTH, 5);
 
     display.setFont(ArialMT_Plain_10);
     display.drawString(10, 50, "Start");
@@ -411,9 +412,15 @@ void RacingCar() {
     display.fillRect(0, 20, 128, 2);
     display.fillRect(0, 41, 128, 2);
     unsigned long millis_value = millis();
-
-    if (digitalRead(LEFT_BUTTON_PIN) == LOW && digitalRead(RIGHT_BUTTON_PIN) == LOW && millis_value - lastCreateBulletTime > DEBOUNCE_DELAY) {
-      if (score >= 3) {
+    if (digitalRead(LEFT_BUTTON_PIN) == LOW && millis_value - lastCreateBulletTime > DEBOUNCE_DELAY && score >= 3) {
+      bool checkWhiteButton = false;
+      for (int i = 0; i < DEBOUNCE_DELAY; i++) {
+        if (digitalRead(RIGHT_BUTTON_PIN) == LOW) {
+          checkWhiteButton = true;
+          break;
+        }
+      }
+      if (checkWhiteButton) {
         lastCreateBulletTime = millis_value;
         lastLeftButtonPressTime = millis_value;
         lastRightButtonPressTime = millis_value;
@@ -423,6 +430,11 @@ void RacingCar() {
         isExistBullet = true;
       }
     }
+
+    // Display player car and obstacle cars
+    display.setColor(WHITE);
+    display.drawXbm(playerX, playerY, Car_width, Car_height, Car);
+    display.drawXbm(bulletX, bulletY, Bullet_width, Bullet_height, Bullet);
 
     // Setup variables and flags if button is pressed
     if (digitalRead(LEFT_BUTTON_PIN) == LOW && millis_value - lastLeftButtonPressTime > DEBOUNCE_DELAY && !isExistBullet) {
@@ -447,17 +459,21 @@ void RacingCar() {
 
     ClickSound();
 
-    // Display player car and obstacle cars
-    display.setColor(WHITE);
-    display.drawXbm(playerX, playerY, Car_width, Car_height, Car);
-    display.drawXbm(bulletX, bulletY, Bullet_width, Bullet_height, Bullet);
-
     for (int i = 0; i < RACING_CAR_ROW_COUNT; i++) {
-      display.drawXbm(obstacleCarsX[i], obstacleCarsY[i], Car_width, Car_height, CarReverse);
+      if (obstacleCarType[i] == 0) {
+        display.drawXbm(obstacleCarsX[i], obstacleCarsY[i], Car_width, Car_height, CarReverse);
+      } else {
+        display.drawXbm(obstacleCarsX[i], obstacleCarsY[i], Truck_width, Truck_height, Truck);
+      }
     }
+    int checkCarType;
 
     for (int i = 0; i < RACING_CAR_ROW_COUNT; i++) {
-
+      if (obstacleCarType[i] == 0) {
+        checkCarType = 0;
+      } else {
+        checkCarType = 1;
+      }
       obstacleCarsX[i] -= speed;
       if (isExistBullet) {
         bulletX += speed;
@@ -474,28 +490,43 @@ void RacingCar() {
       }
 
       // Xe chướng ngại vật ra khỏi màn chơi sẽ dịch chuyển về phải
-      if (obstacleCarsX[i] + Car_width < 0) {
+      if (obstacleCarType[i] == 0 && obstacleCarsX[i] + Car_width < 0) {
         obstacleCarsX[i] = 128 + ((i + 1) * RACING_CAR_DISTANCE * random(0, 6));
         hasScored[i] = false;
+        obstacleCarType[i] = random(0, 2);
       }
 
-      if (-10 <= obstacleCarsY[i] - bulletY && obstacleCarsY[i] - bulletY <= 10 && ((obstacleCarsX[i] <= bulletX && bulletX <= obstacleCarsX[i] + Car_width) || (obstacleCarsX[i] <= bulletX + Bullet_width && bulletX + Bullet_height <= obstacleCarsX[i] + Car_width))) {
-        obstacleCarsX[i] = 128;
+      if (obstacleCarType[i] != 0 && obstacleCarsX[i] + Truck_width < 0) {
+        obstacleCarsX[i] = 128 + ((i + 1) * RACING_CAR_DISTANCE * random(0, 6));
+        hasScored[i] = false;
+        obstacleCarType[i] = random(0, 2);
+      }
+
+      if (isExistBullet && -10 <= obstacleCarsY[i] - bulletY && obstacleCarsY[i] - bulletY <= 10 && ((obstacleCarsX[i] <= bulletX && bulletX <= obstacleCarsX[i] + obstacleCarWidth[checkCarType]) || (obstacleCarsX[i] <= bulletX + Bullet_width && bulletX + Bullet_width <= obstacleCarsX[i] + obstacleCarWidth[checkCarType]))) {
+        obstacleCarsX[i] = 128 + ((i + 1) * RACING_CAR_DISTANCE * random(0, 6));
         bulletX = 128;
-        bulletY = -10.0;
+        bulletY = -20.0;
+        isExistBullet = false;
+      }
+
+      if (bulletX >= 128) {
         isExistBullet = false;
       }
     }
 
     // The buzzer will make sound for 10 milliseconds
-    if ((keyPressTime + 10) < millis()) {
+    if ((keyPressTime + 50) < millis()) {
       isBuzzerOn = false;
     }
 
     // Check collision player with other car
     for (int i = 0; i < RACING_CAR_ROW_COUNT; i++) {
-
-      if (-3 <= obstacleCarsY[i] - playerY && obstacleCarsY[i] - playerY <= 3 && ((obstacleCarsX[i] <= playerX && playerX <= obstacleCarsX[i] + Car_width) || (obstacleCarsX[i] <= playerX + Car_width && playerX + Car_width <= obstacleCarsX[i] + Car_width))) {
+      if (obstacleCarType[i] == 0) {
+        checkCarType = 0;
+      } else {
+        checkCarType = 1;
+      }
+      if (-3 <= obstacleCarsY[i] - playerY && obstacleCarsY[i] - playerY <= 3 && ((obstacleCarsX[i] <= playerX && playerX <= obstacleCarsX[i] + obstacleCarWidth[checkCarType]) || (obstacleCarsX[i] <= playerX + Car_width && playerX + Car_width <= obstacleCarsX[i] + obstacleCarWidth[checkCarType]))) {
         EndingSound();
 
         if (score > highScore) {
@@ -510,13 +541,6 @@ void RacingCar() {
         gameState = 2;
 
         delay(50);
-      }
-
-      if (-10 <= obstacleCarsY[i] - bulletY && obstacleCarsY[i] - bulletY <= 10 && ((obstacleCarsX[i] <= bulletX && bulletX <= obstacleCarsX[i] + Car_width) || (obstacleCarsX[i] <= bulletX + Bullet_width && bulletX + Bullet_height <= obstacleCarsX[i] + Car_width))) {
-        obstacleCarsX[i] = 128;
-        bulletX = 128;
-        bulletY = -10.0;
-        isExistBullet = false;
       }
     }
 
